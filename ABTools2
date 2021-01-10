@@ -1,0 +1,132 @@
+'create pivot table
+Option Explicit
+
+Sub CreatePivotTable()
+    Dim PTcache As PivotCache
+    Dim pt As PivotTable
+    
+    Application.ScreenUpdating = False
+'   Delete PivotSheet if it exists
+    On Error Resume Next
+    Application.DisplayAlerts = False
+    Sheets("PivotSheet").Delete
+    On Error GoTo 0
+    
+'   Create a Pivot Cache
+    Set PTcache = ActiveWorkbook.PivotCaches.Create( _
+      SourceType:=xlDatabase, _
+      SourceData:=Range("A1").CurrentRegion.Address)
+
+'   Add new worksheet
+    Worksheets.Add
+    ActiveSheet.Name = "PivotSheet"
+    ActiveWindow.DisplayGridlines = False
+
+'   Create the Pivot Table from the Cache
+    Set pt = ActiveSheet.PivotTables.Add( _
+      PivotCache:=PTcache, _
+      TableDestination:=Range("A1"), _
+      TableName:="BudgetPivot")
+    
+    With pt
+'       Add fields
+        .PivotFields("Category").Orientation = xlPageField
+        .PivotFields("Division").Orientation = xlPageField
+        .PivotFields("Department").Orientation = xlRowField
+        .PivotFields("Month").Orientation = xlColumnField
+        .PivotFields("Budget").Orientation = xlDataField
+        .PivotFields("Actual").Orientation = xlDataField
+        .DataPivotField.Orientation = xlRowField
+    
+'       Add a calculated field to compute variance
+        .CalculatedFields.Add "Variance", "=Budget-Actual"
+        .PivotFields("Variance").Orientation = xlDataField
+        
+'       Specify a number format
+        .DataBodyRange.NumberFormat = "0,000"
+        
+'       Apply a style
+        .TableStyle2 = "PivotStyleMedium2"
+        
+'       Hide Field Headers
+        .DisplayFieldCaptions = False
+        
+'       Change the captions
+        .PivotFields("Sum of Budget").Caption = " Budget"
+        .PivotFields("Sum of Actual").Caption = " Actual"
+        .PivotFields("Sum of Variance").Caption = " Variance"
+    End With
+End Sub
+
+
+
+
+
+
+
+
+
+'recuperer la liste des fichiers d'un dossier
+Option Explicit
+
+Sub ListFiles()
+    Dim Directory As String
+    Dim r As Long
+    Dim f As String
+    Dim FileSize As Double
+    
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .InitialFileName = Application.DefaultFilePath & "\"
+        .Title = "Select a location containing the files you want to list."
+        .Show
+        If .SelectedItems.Count = 0 Then
+            Exit Sub
+        Else
+            Directory = .SelectedItems(1) & "\"
+        End If
+    End With
+    r = 1
+
+'   Insert headers
+    Cells.ClearContents
+    Cells(r, 1) = "Files in " & Directory
+    Cells(r, 2) = "Size"
+    Cells(r, 3) = "Date/Time"
+    Range("A1:C1").Font.Bold = True
+    
+'   Get first file
+    f = Dir(Directory, vbReadOnly + vbHidden + vbSystem)
+    Do While f <> ""
+        r = r + 1
+        Cells(r, 1) = f
+        'adjust for filesize > 2 gigabytes
+        FileSize = FileLen(Directory & f)
+        If FileSize < 0 Then FileSize = FileSize + 4294967296#
+        Cells(r, 2) = FileSize
+        Cells(r, 3) = FileDateTime(Directory & f)
+    '   Get next file
+        f = Dir
+    Loop
+End Sub
+
+
+
+
+
+
+'parcourir range
+Sub ColorNegative2()
+'   Makes negative cells red
+    Dim WorkRange As Range
+    Dim cell As Range
+    If TypeName(Selection) <> "Range" Then Exit Sub
+    Application.ScreenUpdating = False
+    Set WorkRange = Application.Intersect(Selection, ActiveSheet.UsedRange)
+    For Each cell In WorkRange
+        If cell.Value < 0 Then
+            cell.Interior.Color = RGB(255, 0, 0)
+        Else
+            cell.Interior.Color = xlNone
+        End If
+    Next cell
+End Sub
